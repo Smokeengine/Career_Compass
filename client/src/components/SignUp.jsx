@@ -9,7 +9,7 @@ import { apiRequest } from "../utils/index.js";
 import CustomButton from "./CustomButton";
 import TextInput from "./TextInput";
 
-const SignUp = ({ open, setOpen }) => {
+const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
   const dispatch = useDispatch();
   const location = useLocation();
 
@@ -21,7 +21,6 @@ const SignUp = ({ open, setOpen }) => {
     register,
     handleSubmit,
     getValues,
-    
     formState: { errors },
   } = useForm({
     mode: "onChange",
@@ -34,6 +33,7 @@ const SignUp = ({ open, setOpen }) => {
   const onSubmit = async (data) => {
     let URL = null;
     setIsLoading(true);
+    setParentLoading(true); // Set parent loading state
 
     if (isRegister) {
       if (accountType === "seeker") {
@@ -73,9 +73,11 @@ const SignUp = ({ open, setOpen }) => {
         }
       }
       setIsLoading(false);
+      setParentLoading(false); // Clear parent loading state
     } catch (error) {
       console.log(error);
       setIsLoading(false);
+      setParentLoading(false); // Clear parent loading state on error
     }
   };
 
@@ -115,26 +117,28 @@ const SignUp = ({ open, setOpen }) => {
                   </Dialog.Title>
 
                   <div className='w-full flex items-center justify-center py-4 '>
-                    <customButton
+                    <button
                       className={`flex hover:cursor-pointer flex-1 px-4 py-2 rounded text-sm justify-center items-center outline-none ${
                         accountType === "seeker"
                           ? "bg-[#1d4fd862] text-blue-900 font-semibold"
                           : "bg-white border border-blue-400"
                       }`}
                       onClick={() => setAccountType("seeker")}
+                      disabled={isLoading}
                     >
                       User Account
-                    </customButton>
-                    <customButton
+                    </button>
+                    <button
                       className={`flex flex-1 px-4 py-2 hover:cursor-pointer ml-1 justify-center items-center rounded text-sm outline-none ${
                         accountType !== "seeker"
                           ? "bg-[#1d4fd862] text-blue-900 font-semibold"
                           : "bg-white border border-blue-400"
                       }`}
                       onClick={() => setAccountType("company")}
+                      disabled={isLoading}
                     >
                       Company Account
-                    </customButton>
+                    </button>
                   </div>
 
                   <form
@@ -150,6 +154,7 @@ const SignUp = ({ open, setOpen }) => {
                         required: "Email Address is required!",
                       })}
                       error={errors.email ? errors.email.message : ""}
+                      disabled={isLoading}
                     />
 
                     {isRegister && (
@@ -171,7 +176,7 @@ const SignUp = ({ open, setOpen }) => {
                             placeholder={
                               accountType === "seeker"
                                 ? "eg. James"
-                                : "Comapy name"
+                                : "Company name"
                             }
                             type='text'
                             register={register(
@@ -192,6 +197,7 @@ const SignUp = ({ open, setOpen }) => {
                                 ? errors.name?.message
                                 : ""
                             }
+                            disabled={isLoading}
                           />
                         </div>
 
@@ -208,6 +214,7 @@ const SignUp = ({ open, setOpen }) => {
                               error={
                                 errors.lastName ? errors.lastName?.message : ""
                               }
+                              disabled={isLoading}
                             />
                           </div>
                         )}
@@ -227,31 +234,32 @@ const SignUp = ({ open, setOpen }) => {
                           error={
                             errors.password ? errors.password?.message : ""
                           }
+                          disabled={isLoading}
                         />
                       </div>
 
                       {isRegister && (
                         <div className='w-1/2'>
-                          <TextInput id="password"
+                          <TextInput
+                            id="confirmPassword"
+                            name='confirmPassword'
                             label='Confirm Password'
                             placeholder='Password'
                             type='password'
-                            onClick={register("Password", {
+                            register={register("confirmPassword", {
                               validate: (value) => {
                                 const { password } = getValues();
-
-                                if (password === value) {
-                                  return "Passwords do no match";
+                                if (password !== value) {
+                                  return "Passwords do not match";
                                 }
-                              
                               },
                             })}
                             error={
-                              errors.Password &&
-                              errors.Password.type === "validate"
-                                ? errors.Password?.message
+                              errors.confirmPassword
+                                ? errors.confirmPassword?.message
                                 : ""
                             }
+                            disabled={isLoading}
                           />
                         </div>
                       )}
@@ -267,11 +275,24 @@ const SignUp = ({ open, setOpen }) => {
                     )}
 
                     <div className='mt-2'>
-                    
                       <CustomButton
                         type='submit'
-                        containerStyles="inline-flex justify-center rounded-md bg-blue-600 px-8 py-2 text-sm font-medium text-white outline-none hover:bg-blue-800"
-                        title={isRegister ? "Create Account" : "Login Account"}
+                        containerStyles={`inline-flex justify-center rounded-md px-8 py-2 text-sm font-medium text-white outline-none transition-colors ${
+                          isLoading 
+                            ? "bg-blue-400 cursor-not-allowed" 
+                            : "bg-blue-600 hover:bg-blue-800"
+                        }`}
+                        title={
+                          isLoading 
+                            ? (
+                                <span className="flex items-center">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  {isRegister ? "Creating..." : "Signing In..."}
+                                </span>
+                              )
+                            : (isRegister ? "Create Account" : "Login Account")
+                        }
+                        disabled={isLoading}
                       />  
                     </div>
                   </form>
@@ -283,8 +304,12 @@ const SignUp = ({ open, setOpen }) => {
                         : "Do not have an account"}
 
                       <span
-                        className='text-sm text-blue-600 ml-2 hover:text-blue-700 hover:font-semibold cursor-pointer'
-                        onClick={() => setIsRegister((prev) => !prev)}
+                        className={`text-sm ml-2 cursor-pointer ${
+                          isLoading 
+                            ? "text-gray-400 cursor-not-allowed" 
+                            : "text-blue-600 hover:text-blue-700 hover:font-semibold"
+                        }`}
+                        onClick={() => !isLoading && setIsRegister((prev) => !prev)}
                       >
                         {isRegister ? "Login" : "Create Account"}
                       </span>
