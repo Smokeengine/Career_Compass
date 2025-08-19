@@ -119,7 +119,7 @@ const FindJobs = () => {
         <div className='hidden md:flex flex-col w-1/6 h-fit bg-[#fff] shadow-sm p-4 rounded-md hover:shadow-lg pl-2'>
           <p className='text-lg font-semibold text-slate-600'>Filter Search</p>
 
-          <div className='py-2 shadow-lg'>
+          <div className='p-4 shadow-lg'>
             <div className='flex justify-between mb-3'>
               <p className='flex items-center gap-2 font-semibold'>
                 <BiBriefcaseAlt2 />
@@ -144,7 +144,7 @@ const FindJobs = () => {
             </div>
           </div>
 
-          <div className='py-2 mt-4 shadow-lg'>
+          <div className='p-4 mt-4 shadow-lg'>
             <div className='flex justify-between mb-3'>
               <p className='flex items-center gap-2 font-semibold'>
                 <BsStars />
