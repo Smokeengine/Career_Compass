@@ -306,12 +306,7 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
                         } w-full`}
                         title={
                           isLoading 
-                            ? (
-                                <span className="flex items-center justify-center">
-                                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
-                                  {isRegister ? "Creating Account..." : "Signing In..."}
-                                </span>
-                              )
+                            ? "Loading..."
                             : (isRegister ? "Create Account" : "Login Account")
                         }
                         disabled={isLoading}
