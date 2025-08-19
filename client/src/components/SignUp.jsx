@@ -32,8 +32,13 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
 
   const onSubmit = async (data) => {
     let URL = null;
+    
+    // Set both loading states
     setIsLoading(true);
-    setParentLoading(true); // Set parent loading state
+    setParentLoading(true);
+    
+    // Clear any previous error messages
+    setErrMsg("");
 
     if (isRegister) {
       if (accountType === "seeker") {
@@ -58,9 +63,9 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
         setErrMsg(res?.message);
       } else {
         if (isRegister) {
-          setErrMsg(res?.message);
+          setErrMsg("Account created successfully! Redirecting...");
 
-          setInterval(() => {
+          setTimeout(() => {
             window.location.replace("/");
           }, 5000);
         } else {
@@ -72,19 +77,20 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
           window.location.replace(from);
         }
       }
-      setIsLoading(false);
-      setParentLoading(false); // Clear parent loading state
     } catch (error) {
       console.log(error);
+      setErrMsg("Something went wrong. Please try again.");
+    } finally {
+      // Clear loading states
       setIsLoading(false);
-      setParentLoading(false); // Clear parent loading state on error
+      setParentLoading(false);
     }
   };
 
   return (
     <>
       <Transition appear show={open || false}>
-        <Dialog as='div' className='relative z-10 ' onClose={closeModal}>
+        <Dialog as='div' className='relative z-50' onClose={closeModal}>
           <Transition.Child
             as={Fragment}
             enter='ease-out duration-300'
@@ -108,7 +114,19 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
                 leaveFrom='opacity-100 scale-100'
                 leaveTo='opacity-0 scale-95'
               >
-                <Dialog.Panel className='w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all '>
+                <Dialog.Panel className='w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all relative'>
+                  {/* Modal Loading Overlay */}
+                  {isLoading && (
+                    <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10 rounded-2xl">
+                      <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600 mb-3"></div>
+                        <p className="text-gray-700 font-medium">
+                          {isRegister ? "Creating account..." : "Signing in..."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <Dialog.Title
                     as='h3'
                     className='text-xl font-semibold lwading-6 text-gray-900'
@@ -118,23 +136,23 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
 
                   <div className='w-full flex items-center justify-center py-4 '>
                     <button
-                      className={`flex hover:cursor-pointer flex-1 px-4 py-2 rounded text-sm justify-center items-center outline-none ${
+                      className={`flex hover:cursor-pointer flex-1 px-4 py-2 rounded text-sm justify-center items-center outline-none transition-colors ${
                         accountType === "seeker"
                           ? "bg-[#1d4fd862] text-blue-900 font-semibold"
                           : "bg-white border border-blue-400"
-                      }`}
-                      onClick={() => setAccountType("seeker")}
+                      } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
+                      onClick={() => !isLoading && setAccountType("seeker")}
                       disabled={isLoading}
                     >
                       User Account
                     </button>
                     <button
-                      className={`flex flex-1 px-4 py-2 hover:cursor-pointer ml-1 justify-center items-center rounded text-sm outline-none ${
+                      className={`flex flex-1 px-4 py-2 hover:cursor-pointer ml-1 justify-center items-center rounded text-sm outline-none transition-colors ${
                         accountType !== "seeker"
                           ? "bg-[#1d4fd862] text-blue-900 font-semibold"
                           : "bg-white border border-blue-400"
-                      }`}
-                      onClick={() => setAccountType("company")}
+                      } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
+                      onClick={() => !isLoading && setAccountType("company")}
                       disabled={isLoading}
                     >
                       Company Account
@@ -268,7 +286,11 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
                     {errMsg && (
                       <span
                         role='alert'
-                        className='text-sm text-red-500 mt-0.5'
+                        className={`text-sm mt-0.5 font-medium ${
+                          errMsg.includes("successfully") 
+                            ? "text-green-600" 
+                            : "text-red-500"
+                        }`}
                       >
                         {errMsg}
                       </span>
@@ -277,17 +299,17 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
                     <div className='mt-2'>
                       <CustomButton
                         type='submit'
-                        containerStyles={`inline-flex justify-center rounded-md px-8 py-2 text-sm font-medium text-white outline-none transition-colors ${
+                        containerStyles={`inline-flex justify-center rounded-md px-8 py-2 text-sm font-medium text-white outline-none transition-all duration-200 ${
                           isLoading 
                             ? "bg-blue-400 cursor-not-allowed" 
-                            : "bg-blue-600 hover:bg-blue-800"
-                        }`}
+                            : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                        } w-full`}
                         title={
                           isLoading 
                             ? (
-                                <span className="flex items-center">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                  {isRegister ? "Creating..." : "Signing In..."}
+                                <span className="flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                                  {isRegister ? "Creating Account..." : "Signing In..."}
                                 </span>
                               )
                             : (isRegister ? "Create Account" : "Login Account")
@@ -300,18 +322,18 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
                   <div className='mt-4'>
                     <p className='text-sm text-gray-700'>
                       {isRegister
-                        ? "Already has an account?"
-                        : "Do not have an account"}
+                        ? "Already have an account?"
+                        : "Don't have an account?"}
 
                       <span
-                        className={`text-sm ml-2 cursor-pointer ${
+                        className={`text-sm ml-2 transition-colors ${
                           isLoading 
                             ? "text-gray-400 cursor-not-allowed" 
-                            : "text-blue-600 hover:text-blue-700 hover:font-semibold"
+                            : "text-blue-600 hover:text-blue-700 hover:font-semibold cursor-pointer"
                         }`}
                         onClick={() => !isLoading && setIsRegister((prev) => !prev)}
                       >
-                        {isRegister ? "Login" : "Create Account"}
+                        {isRegister ? "Sign In" : "Create Account"}
                       </span>
                     </p>
                   </div>
