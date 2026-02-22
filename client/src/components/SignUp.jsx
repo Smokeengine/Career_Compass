@@ -31,6 +31,7 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
   const closeModal = () => {}; //setOpen(false);
 
   const onSubmit = async (data) => {
+    if (isLoading) return
     let URL = null;
     
     // Set both loading states
@@ -59,8 +60,8 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
         method: "POST",
       });
 
-      if (res?.status === "failed") {
-        setErrMsg(res?.message);
+      if (res?.status === 'failed' || res?.success === 'failed' || res?.success === false) {
+  setErrMsg(res?.message || 'Request failed')
       } else {
         if (isRegister) {
           setErrMsg("Account created successfully! Redirecting...");
@@ -298,19 +299,16 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
 
                     <div className='mt-2'>
                       <CustomButton
-                        type='submit'
-                        containerStyles={`inline-flex justify-center rounded-md px-8 py-2 text-sm font-medium text-white outline-none transition-all duration-200 ${
-                          isLoading 
-                            ? "bg-blue-400 cursor-not-allowed" 
-                            : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                        } w-full`}
-                        title={
-                          isLoading 
-                            ? "Loading..."
-                            : (isRegister ? "Create Account" : "Login Account")
-                        }
-                        disabled={isLoading}
-                      />  
+                          type='submit'
+                          containerStyles={`inline-flex justify-center rounded-md px-8 py-2 text-sm font-medium text-white outline-none transition-all duration-200 ${
+                            isLoading
+                              ? 'bg-blue-400 cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+                          } w-full`}
+                          title={isLoading ? (isRegister ? 'Creating account...' : 'Signing in...') : isRegister ? 'Create Account' : 'Login Account'}
+                          disabled={isLoading}
+                          isLoading={isLoading}
+                        />  
                     </div>
                   </form>
 
