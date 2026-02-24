@@ -1,8 +1,10 @@
-# Career Compass
+# Career Compass - https://career-compasss.netlify.app/user-auth
 
 Career Compass is a full stack job portal web application that connects job seekers with companies.
 
 It includes a React + Vite frontend for job discovery and profile management, and a Node.js + Express + MongoDB backend that supports authentication, company profiles, and job posting APIs.
+
+## You can Login using the user account where email id: test@12example.com and password: password123
 
 ---
 
