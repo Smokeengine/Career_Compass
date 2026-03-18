@@ -117,16 +117,7 @@ const SignUp = ({ open, setOpen, setIsLoading: setParentLoading }) => {
               >
                 <Dialog.Panel className='w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all relative'>
                   {/* Modal Loading Overlay */}
-                  {isLoading && (
-                    <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10 rounded-2xl">
-                      <div className="flex flex-col items-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600 mb-3"></div>
-                        <p className="text-gray-700 font-medium">
-                          {isRegister ? "Creating account..." : "Signing in..."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  
                   
                   <Dialog.Title
                     as='h3'
