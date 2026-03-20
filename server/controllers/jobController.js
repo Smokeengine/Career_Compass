@@ -104,22 +104,47 @@ export const updateJob = async (req, res, next) => {
 
 export const getJobPosts = async (req, res, next) => {
   try {
-    const { search, location, page } = req.query;
+    const { search, location, page, jtype, exp, datePosted } = req.query;
 
     const query = search ? `${search} jobs` : 'software developer jobs';
     const loc = location || 'united states';
     const currentPage = Number(page) || 1;
 
-    const response = await fetch(
-      `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=${currentPage}&num_pages=1&date_posted=month`,
-      {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': process.env.JSEARCH_API_KEY,
-          'x-rapidapi-host': 'jsearch.p.rapidapi.com',
-        }
+    // Map experience filter to JSearch
+    let employmentTypes = '';
+    if (jtype) {
+      const typeMap = {
+        'Full-Time': 'FULLTIME',
+        'Part-Time': 'PARTTIME',
+        'Contract': 'CONTRACTOR',
+        'Intern': 'INTERN',
+      };
+      const types = jtype.split(',').map(t => typeMap[t.trim()]).filter(Boolean);
+      employmentTypes = types.join(',');
+    }
+
+    // Map date posted
+    const dateMap = {
+      'today': 'today',
+      'week': '3days',
+      'month': 'month',
+      'all': 'all'
+    };
+    const dateFilter = dateMap[datePosted] || 'month';
+
+    let url = `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=${currentPage}&num_pages=1&date_posted=${dateFilter}`;
+
+    if (employmentTypes) {
+      url += `&employment_types=${employmentTypes}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': process.env.JSEARCH_API_KEY,
+        'x-rapidapi-host': 'jsearch.p.rapidapi.com',
       }
-    );
+    });
 
     const data = await response.json();
 
@@ -131,7 +156,9 @@ export const getJobPosts = async (req, res, next) => {
       salary: job.job_min_salary
         ? `$${job.job_min_salary} - $${job.job_max_salary}`
         : 'Competitive',
-      experience: 0,
+      experience: job.job_required_experience?.required_experience_in_months
+        ? Math.floor(job.job_required_experience.required_experience_in_months / 12)
+        : 0,
       detail: {
         desc: job.job_description?.slice(0, 300) + '...',
         requirements: job.job_highlights?.Qualifications?.join(', ') || '',
