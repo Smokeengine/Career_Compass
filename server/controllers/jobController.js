@@ -104,115 +104,58 @@ export const updateJob = async (req, res, next) => {
 
 export const getJobPosts = async (req, res, next) => {
   try {
-    const { search, sort, location, jtype, exp } = req.query;
-    const types = jtype?.split(",");
-    const experience = exp?.split("-");
+    const { search, sort, location } = req.query;
 
-    let queryObject = {};
+    const query = search ? `${search} jobs` : 'software developer jobs';
+    const loc = location || 'united states';
 
-    if (location) {
-      queryObject.location = { $regex: location, $options: "i" };
-    }
-
-    if (jtype) {
-      queryObject.jobType = { $in: types };
-    }
-
-    if (exp) {
-      queryObject.experience = {
-        $gte: Number(experience[0]) - 1,
-        $lte: Number(experience[1]) + 1,
-      };
-    }
-
-    if (search) {
-      const searchQuery = {
-        $or: [
-          { jobTitle: { $regex: search, $options: "i" } },
-          { jobType: { $regex: search, $options: "i" } },
-        ],
-      };
-      queryObject = { ...queryObject, ...searchQuery };
-    }
-
-    let queryResult = Jobs.find(queryObject).populate({
-      path: "company",
-      select: "-password",
-    });
-
-    if (sort === "Newest") queryResult = queryResult.sort("-createdAt");
-    if (sort === "Oldest") queryResult = queryResult.sort("createdAt");
-    if (sort === "A-Z") queryResult = queryResult.sort("jobTitle");
-    if (sort === "Z-A") queryResult = queryResult.sort("-jobTitle");
-
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
-
-    const totalJobs = await Jobs.countDocuments(queryResult);
-    const numOfPage = Math.ceil(totalJobs / limit);
-
-    queryResult = queryResult.limit(limit * page);
-    const jobs = await queryResult;
-
-    // Fetch external jobs from JSearch
-    let externalJobs = [];
-    try {
-      const query = search ? `${search} jobs` : 'software developer jobs';
-      const loc = location || 'united states';
-
-      const response = await fetch(
-        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=1&num_pages=2&date_posted=month`,
-        {
-          method: 'GET',
-          headers: {
-            'x-rapidapi-key': process.env.JSEARCH_API_KEY,
-            'x-rapidapi-host': 'jsearch.p.rapidapi.com',
-          }
+    const response = await fetch(
+      `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=1&num_pages=3&date_posted=month`,
+      {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-key': process.env.JSEARCH_API_KEY,
+          'x-rapidapi-host': 'jsearch.p.rapidapi.com',
         }
-      );
+      }
+    );
 
-      const data = await response.json();
+    const data = await response.json();
 
-      externalJobs = data.data?.map(job => ({
-        _id: job.job_id,
-        jobTitle: job.job_title,
-        jobType: job.job_employment_type || 'Full-Time',
+    const jobs = data.data?.map(job => ({
+      _id: job.job_id,
+      jobTitle: job.job_title,
+      jobType: job.job_employment_type || 'Full-Time',
+      location: `${job.job_city || ''}, ${job.job_country || ''}`,
+      salary: job.job_min_salary
+        ? `$${job.job_min_salary} - $${job.job_max_salary}`
+        : 'Competitive',
+      experience: 0,
+      detail: {
+        desc: job.job_description?.slice(0, 300) + '...',
+        requirements: job.job_highlights?.Qualifications?.join(', ') || '',
+      },
+      company: {
+        name: job.employer_name,
+        profileUrl: job.employer_logo || '',
         location: `${job.job_city || ''}, ${job.job_country || ''}`,
-        salary: job.job_min_salary
-          ? `$${job.job_min_salary} - $${job.job_max_salary}`
-          : 'Competitive',
-        experience: 0,
-        detail: {
-          desc: job.job_description?.slice(0, 300) + '...',
-          requirements: job.job_highlights?.Qualifications?.join(', ') || '',
-        },
-        company: {
-          name: job.employer_name,
-          profileUrl: job.employer_logo || '',
-          location: `${job.job_city || ''}, ${job.job_country || ''}`,
-        },
-        createdAt: job.job_posted_at_datetime_utc || new Date(),
-        isExternal: true,
-        applyUrl: job.job_apply_link,
-      })) || [];
-    } catch (apiError) {
-      console.log('JSearch API error:', apiError.message);
-    }
-
-    // Merge internal + external jobs
-    const allJobs = [...jobs, ...externalJobs];
-    const totalCount = totalJobs + externalJobs.length;
+      },
+      createdAt: job.job_posted_at_datetime_utc || new Date(),
+      isExternal: true,
+      applyUrl: job.job_apply_link,
+    })) || [];
 
     res.status(200).json({
       success: true,
-      totalJobs: totalCount,
-      data: allJobs,
-      page,
-      numOfPage,
+      totalJobs: jobs.length,
+      data: jobs,
+      page: 1,
+      numOfPage: 1,
     });
+
   } catch (error) {
     console.log(error);
-    res.status(404).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
