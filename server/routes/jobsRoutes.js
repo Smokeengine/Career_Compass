@@ -16,7 +16,7 @@ router.post("/upload-job", userAuth, createJob);
 // UPDATE JOB
 router.put("/update-job/:jobId", userAuth, updateJob);
 
-// GET JOB POST
+// GET JOB POSTS (includes external jobs from JSearch)
 router.get("/find-jobs", getJobPosts);
 router.get("/get-job-detail/:id", getJobById);
 
