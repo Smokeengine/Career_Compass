@@ -121,6 +121,9 @@ export const getJobPosts = async (req, res, next) => {
     );
 
     const data = await response.json();
+    console.log('JSearch response status:', response.status)
+    console.log('JSearch data keys:', Object.keys(data))
+    console.log('JSearch data length:', data.data?.length)
 
     const jobs = data.data?.map(job => ({
       _id: job.job_id,
