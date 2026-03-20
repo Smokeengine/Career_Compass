@@ -15,14 +15,7 @@ export const createJob = async (req, res, next) => {
       requirements,
     } = req.body;
 
-    if (
-      !jobTitle ||
-      !jobType ||
-      !location ||
-      !salary ||
-      !requirements ||
-      !desc
-    ) {
+    if (!jobTitle || !jobType || !location || !salary || !requirements || !desc) {
       next("Please Provide All Required Fields");
       return;
     }
@@ -46,17 +39,13 @@ export const createJob = async (req, res, next) => {
     const job = new Jobs(jobPost);
     await job.save();
 
-    //update the company information with job id
     const company = await Companies.findById(id);
-
     company.jobPosts.push(job._id);
-    const updateCompany = await Companies.findByIdAndUpdate(id, company, {
-      new: true,
-    });
+    await Companies.findByIdAndUpdate(id, company, { new: true });
 
     res.status(200).json({
       success: true,
-      message: "Job Posted SUccessfully",
+      message: "Job Posted Successfully",
       job,
     });
   } catch (error) {
@@ -79,17 +68,11 @@ export const updateJob = async (req, res, next) => {
     } = req.body;
     const { jobId } = req.params;
 
-    if (
-      !jobTitle ||
-      !jobType ||
-      !location ||
-      !salary ||
-      !desc ||
-      !requirements
-    ) {
+    if (!jobTitle || !jobType || !location || !salary || !desc || !requirements) {
       next("Please Provide All Required Fields");
       return;
     }
+
     const id = req.body.user.userId;
 
     if (!mongoose.Types.ObjectId.isValid(id))
@@ -122,8 +105,8 @@ export const updateJob = async (req, res, next) => {
 export const getJobPosts = async (req, res, next) => {
   try {
     const { search, sort, location, jtype, exp } = req.query;
-    const types = jtype?.split(","); //full-time,part-time
-    const experience = exp?.split("-"); //2-6
+    const types = jtype?.split(",");
+    const experience = exp?.split("-");
 
     let queryObject = {};
 
@@ -134,8 +117,6 @@ export const getJobPosts = async (req, res, next) => {
     if (jtype) {
       queryObject.jobType = { $in: types };
     }
-
-    //    [2. 6]
 
     if (exp) {
       queryObject.experience = {
@@ -159,37 +140,73 @@ export const getJobPosts = async (req, res, next) => {
       select: "-password",
     });
 
-    // SORTING
-    if (sort === "Newest") {
-      queryResult = queryResult.sort("-createdAt");
-    }
-    if (sort === "Oldest") {
-      queryResult = queryResult.sort("createdAt");
-    }
-    if (sort === "A-Z") {
-      queryResult = queryResult.sort("jobTitle");
-    }
-    if (sort === "Z-A") {
-      queryResult = queryResult.sort("-jobTitle");
-    }
+    if (sort === "Newest") queryResult = queryResult.sort("-createdAt");
+    if (sort === "Oldest") queryResult = queryResult.sort("createdAt");
+    if (sort === "A-Z") queryResult = queryResult.sort("jobTitle");
+    if (sort === "Z-A") queryResult = queryResult.sort("-jobTitle");
 
-    // pagination
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
 
-    //records count
     const totalJobs = await Jobs.countDocuments(queryResult);
     const numOfPage = Math.ceil(totalJobs / limit);
 
     queryResult = queryResult.limit(limit * page);
-
     const jobs = await queryResult;
+
+    // Fetch external jobs from JSearch
+    let externalJobs = [];
+    try {
+      const query = search ? `${search} jobs` : 'software developer jobs';
+      const loc = location || 'united states';
+
+      const response = await fetch(
+        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=1&num_pages=2&date_posted=month`,
+        {
+          method: 'GET',
+          headers: {
+            'x-rapidapi-key': process.env.JSEARCH_API_KEY,
+            'x-rapidapi-host': 'jsearch.p.rapidapi.com',
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      externalJobs = data.data?.map(job => ({
+        _id: job.job_id,
+        jobTitle: job.job_title,
+        jobType: job.job_employment_type || 'Full-Time',
+        location: `${job.job_city || ''}, ${job.job_country || ''}`,
+        salary: job.job_min_salary
+          ? `$${job.job_min_salary} - $${job.job_max_salary}`
+          : 'Competitive',
+        experience: 0,
+        detail: {
+          desc: job.job_description?.slice(0, 300) + '...',
+          requirements: job.job_highlights?.Qualifications?.join(', ') || '',
+        },
+        company: {
+          name: job.employer_name,
+          profileUrl: job.employer_logo || '',
+          location: `${job.job_city || ''}, ${job.job_country || ''}`,
+        },
+        createdAt: job.job_posted_at_datetime_utc || new Date(),
+        isExternal: true,
+        applyUrl: job.job_apply_link,
+      })) || [];
+    } catch (apiError) {
+      console.log('JSearch API error:', apiError.message);
+    }
+
+    // Merge internal + external jobs
+    const allJobs = [...jobs, ...externalJobs];
+    const totalCount = totalJobs + externalJobs.length;
 
     res.status(200).json({
       success: true,
-      totalJobs,
-      data: jobs,
+      totalJobs: totalCount,
+      data: allJobs,
       page,
       numOfPage,
     });
@@ -215,7 +232,6 @@ export const getJobById = async (req, res, next) => {
       });
     }
 
-    //GET SIMILAR JOB POST
     const searchQuery = {
       $or: [
         { jobTitle: { $regex: job?.jobTitle, $options: "i" } },
@@ -224,10 +240,7 @@ export const getJobById = async (req, res, next) => {
     };
 
     let queryResult = Jobs.find(searchQuery)
-      .populate({
-        path: "company",
-        select: "-password",
-      })
+      .populate({ path: "company", select: "-password" })
       .sort({ _id: -1 });
 
     queryResult = queryResult.limit(6);
@@ -247,12 +260,10 @@ export const getJobById = async (req, res, next) => {
 export const deleteJobPost = async (req, res, next) => {
   try {
     const { id } = req.params;
-
     await Jobs.findByIdAndDelete(id);
-
     res.status(200).send({
       success: true,
-      messsage: "Job Post Deleted Successfully.",
+      message: "Job Post Deleted Successfully.",
     });
   } catch (error) {
     console.log(error);
