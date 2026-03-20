@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Header, Loading } from "../components";
 import { BiBriefcaseAlt2 } from "react-icons/bi";
@@ -15,35 +15,45 @@ const datePostedOptions = [
   { label: "Last Month", value: "month" },
 ];
 
+const skillChips = [
+  "React Developer",
+  "Full Stack Engineer",
+  "Node.js Developer",
+  "TypeScript Engineer",
+  "Frontend Engineer",
+  "Software Engineer",
+];
+
 const FindJobs = () => {
   const [sort, setSort] = useState("Newest");
   const [page, setPage] = useState(1);
   const [numPage, setNumPage] = useState(1);
-  const [recordCount, setRecordCount] = useState(0);
   const [data, setData] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [jobLocation, setJobLocation] = useState("");
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("full stack engineer");
+  const [jobLocation, setJobLocation] = useState("United States");
   const [filterJobTypes, setFilterJobTypes] = useState([]);
-  const [filterExp, setFilterExp] = useState([]);
   const [expVal, setExpVal] = useState([]);
   const [datePosted, setDatePosted] = useState("month");
   const [isFetching, setIsFetching] = useState(false);
+  const isMounted = useRef(false);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (resetPage = false) => {
     setIsFetching(true);
+    const currentPage = resetPage ? 1 : page;
 
     const newURL = updateURL({
-      pageNum: page,
+      pageNum: currentPage,
       query: searchQuery,
       cmpLoc: jobLocation,
-      sort: sort,
-      navigate: navigate,
-      location: location,
+      sort,
+      navigate,
+      location,
       jType: filterJobTypes,
-      exp: filterExp,
+      exp: "",
     });
 
     try {
@@ -52,61 +62,98 @@ const FindJobs = () => {
         method: "GET",
       });
 
-      setNumPage(res?.numOfPage);
-      setRecordCount(res?.totalJobs);
-      setData(prev => page === 1 ? res.data : [...prev, ...res.data]);
-      setIsFetching(false);
+      const newData = res?.data || [];
+      setData(prev => currentPage === 1 ? newData : [...prev, ...newData]);
+      setNumPage(res?.numOfPage || 1);
+      if (resetPage) setPage(1);
     } catch (error) {
-      setIsFetching(false);
       console.log(error);
+    } finally {
+      setIsFetching(false);
     }
   };
+
+  // Apply experience filter client-side
+  useEffect(() => {
+    if (expVal.length === 0) {
+      setFilteredData(data);
+      return;
+    }
+
+    // Parse experience ranges
+    let minExp = Infinity;
+    let maxExp = 0;
+    expVal.forEach(val => {
+      const parts = val.split('-');
+      const min = Number(parts[0]);
+      const max = Number(parts[1]);
+      if (min < minExp) minExp = min;
+      if (max > maxExp) maxExp = max;
+    });
+
+    const filtered = data.filter(job => {
+      const jobExp = job?.experience || 0;
+      return jobExp >= minExp - 1 && jobExp <= maxExp + 1;
+    });
+
+    setFilteredData(filtered);
+  }, [data, expVal]);
 
   const filterJobs = (val) => {
-    setPage(1);
-    if (filterJobTypes?.includes(val)) {
-      setFilterJobTypes(filterJobTypes.filter((el) => el !== val));
-    } else {
-      setFilterJobTypes([...filterJobTypes, val]);
-    }
+    setFilterJobTypes(prev =>
+      prev.includes(val) ? prev.filter(el => el !== val) : [...prev, val]
+    );
   };
 
-  const filterExperience = async (e) => {
-    setPage(1);
-    if (expVal?.includes(e)) {
-      setExpVal(expVal?.filter((el) => el != e));
-    } else {
-      setExpVal([...expVal, e]);
-    }
+  const filterExperience = (val) => {
+    setExpVal(prev =>
+      prev.includes(val) ? prev.filter(el => el !== val) : [...prev, val]
+    );
   };
 
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
-    setPage(1);
     setData([]);
-    await fetchJobs();
+    await fetchJobs(true);
   };
 
-  const handleShowMore = async (e) => {
+  const handleChipClick = (skill) => {
+    setSearchQuery(skill);
+    setData([]);
+    setPage(1);
+  };
+
+  const handleShowMore = (e) => {
     e.preventDefault();
-    setPage((prev) => prev + 1);
+    setPage(prev => prev + 1);
   };
 
+  // Only fetch on mount
   useEffect(() => {
-    if (expVal.length > 0) {
-      let newExpVal = [];
-      expVal?.map((el) => {
-        const newEl = el?.split("-");
-        newExpVal.push(Number(newEl[0]), Number(newEl[1]));
-      });
-      newExpVal?.sort((a, b) => a - b);
-      setFilterExp(`${newExpVal[0]}-${newExpVal[newExpVal?.length - 1]}`);
-    }
-  }, [expVal]);
+    fetchJobs(true);
+  }, []);
 
+  // Fetch when filters change (not on mount)
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    setData([]);
+    fetchJobs(true);
+  }, [filterJobTypes, datePosted, sort]);
+
+  // Fetch when page changes (load more)
+  useEffect(() => {
+    if (page === 1) return;
     fetchJobs();
-  }, [sort, filterJobTypes, filterExp, page, datePosted]);
+  }, [page]);
+
+  // Fetch when chip search changes
+  useEffect(() => {
+    if (!isMounted.current) return;
+    fetchJobs(true);
+  }, [searchQuery]);
 
   return (
     <div>
@@ -120,19 +167,35 @@ const FindJobs = () => {
         setLocation={setJobLocation}
       />
 
+      {/* Skill chips */}
+      <div className='flex flex-wrap gap-2 px-6 py-3 bg-white border-b border-gray-100 justify-center'>
+        {skillChips.map((skill) => (
+          <button
+            key={skill}
+            onClick={() => handleChipClick(skill)}
+            className={`px-3 py-1 rounded-full text-sm border transition-colors cursor-pointer ${
+              searchQuery === skill
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white'
+            }`}
+          >
+            {skill}
+          </button>
+        ))}
+      </div>
+
       <div className='container mx-auto flex gap-6 2xl:gap-10 md:px-5 py-0 md:py-6 bg-[#f0f0f0] rounded-lg mb-3'>
 
         {/* Filter Sidebar */}
         <div className='hidden md:flex flex-col w-1/6 h-fit bg-white shadow-md rounded-xl overflow-hidden sticky top-6'>
 
-          {/* Sidebar Header */}
           <div className='bg-blue-600 px-4 py-3'>
             <p className='text-white font-semibold text-sm tracking-wide uppercase'>
               Filter Jobs
             </p>
           </div>
 
-          {/* Job Type Section */}
+          {/* Job Type */}
           <div className='px-4 py-4 border-b border-gray-100'>
             <p className='flex items-center gap-2 font-semibold text-gray-700 text-sm mb-3'>
               <BiBriefcaseAlt2 className='text-blue-600 text-base' />
@@ -155,7 +218,7 @@ const FindJobs = () => {
             </div>
           </div>
 
-          {/* Experience Section */}
+          {/* Experience */}
           <div className='px-4 py-4 border-b border-gray-100'>
             <p className='flex items-center gap-2 font-semibold text-gray-700 text-sm mb-3'>
               <BsStars className='text-blue-600 text-base' />
@@ -178,7 +241,7 @@ const FindJobs = () => {
             </div>
           </div>
 
-          {/* Date Posted Section */}
+          {/* Date Posted */}
           <div className='px-4 py-4'>
             <p className='flex items-center gap-2 font-semibold text-gray-700 text-sm mb-3'>
               <MdOutlineWatchLater className='text-blue-600 text-base' />
@@ -195,8 +258,8 @@ const FindJobs = () => {
                     className='w-4 h-4 accent-blue-600 cursor-pointer'
                     onChange={(e) => {
                       setDatePosted(e.target.value);
-                      setPage(1);
                       setData([]);
+                      setPage(1);
                     }}
                   />
                   <span className='text-sm text-gray-600 group-hover:text-blue-600 transition-colors'>
@@ -212,11 +275,10 @@ const FindJobs = () => {
         {/* Jobs List */}
         <div className='w-full md:w-5/6 px-5 md:px-0'>
 
-          {/* Results header */}
           <div className='flex items-center justify-between mb-4 bg-white rounded-xl px-4 py-3 shadow-sm'>
             <p className='text-sm md:text-base text-gray-600'>
               Showing:{" "}
-              <span className='font-semibold text-gray-900'>{data.length}</span>{" "}
+              <span className='font-semibold text-gray-900'>{filteredData.length}</span>{" "}
               Jobs Available
             </p>
             <div className='flex flex-col md:flex-row gap-0 md:gap-2 md:items-center'>
@@ -225,9 +287,8 @@ const FindJobs = () => {
             </div>
           </div>
 
-          {/* Job Cards */}
           <div className='w-full flex flex-wrap gap-4'>
-            {data?.map((job, index) => {
+            {filteredData?.map((job, index) => {
               const newJob = {
                 name: job?.company?.name,
                 logo: job?.company?.profileUrl,
@@ -237,14 +298,12 @@ const FindJobs = () => {
             })}
           </div>
 
-          {/* Loading */}
           {isFetching && (
             <div className='py-10'>
               <Loading />
             </div>
           )}
 
-          {/* Load More */}
           {numPage > page && !isFetching && (
             <div className='w-full flex items-center justify-center pt-16'>
               <CustomButton
