@@ -168,21 +168,7 @@ const FindJobs = () => {
       />
 
       {/* Skill chips */}
-      <div className='flex flex-wrap gap-2 px-6 py-3 bg-white border-b border-gray-100 justify-center'>
-        {skillChips.map((skill) => (
-          <button
-            key={skill}
-            onClick={() => handleChipClick(skill)}
-            className={`px-3 py-1 rounded-full text-sm border transition-colors cursor-pointer ${
-              searchQuery === skill
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white'
-            }`}
-          >
-            {skill}
-          </button>
-        ))}
-      </div>
+      
 
       <div className='container mx-auto flex gap-6 2xl:gap-10 md:px-5 py-0 md:py-6 bg-[#f0f0f0] rounded-lg mb-3'>
 
