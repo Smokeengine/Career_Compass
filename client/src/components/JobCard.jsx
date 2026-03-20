@@ -1,30 +1,35 @@
 import moment from "moment";
 import { GoLocation } from "react-icons/go";
 import { Link } from "react-router-dom";
+
 const noLogo =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/450px-No_image_available.svg.png";
 
 const JobCard = ({ job }) => {
+  // Handle both old MongoDB format (detail[0].desc) and new JSearch format (detail.desc)
+  const desc = Array.isArray(job?.detail)
+    ? job?.detail[0]?.desc
+    : job?.detail?.desc;
+
+  const logo = job?.logo || job?.company?.profileUrl || noLogo;
+
   return (
     <Link
-      to={`/job-detail/${job?._id}`}
-      className='w-full md:w-[16rem] 2xl:w-[18rem] h-[16rem] md:h-[18rem] bg-white flex flex-col justify-between shadow-md hover:shadow-2xl 
-                rounded-md px-3 py-5 '
+      to={job?.isExternal ? job?.applyUrl : `/job-detail/${job?._id}`}
+      target={job?.isExternal ? "_blank" : "_self"}
+      rel={job?.isExternal ? "noopener noreferrer" : ""}
+      className='w-full md:w-[16rem] 2xl:w-[18rem] h-[16rem] md:h-[18rem] bg-white flex flex-col justify-between shadow-md hover:shadow-2xl rounded-md px-3 py-5'
     >
-      {/* <div
-        className='w-full md:w-[16rem] 2xl:w-[18rem] h-[16rem] md:h-[18rem] bg-white flex flex-col justify-between shadow-lg 
-                rounded-md px-3 py-5 '
-      > */}
       <div className='w-full h-full flex flex-col justify-between'>
         <div className='flex gap-3'>
           <img
-            src={job?.logo || noLogo}
-            alt={job?.name}
-            className='w-14 h-14 '
+            src={logo}
+            alt={job?.name || job?.company?.name}
+            className='w-14 h-14 object-contain rounded'
+            onError={(e) => { e.target.src = noLogo }}
           />
-
           <div className='w-full h-16 flex flex-col justify-center'>
-            <p className='w-full h-12 flex item-center text-lg font-semibold overflow-hidden leading-5'>
+            <p className='w-full h-12 flex items-center text-lg font-semibold overflow-hidden leading-5'>
               {job?.jobTitle}
             </p>
             <span className='flex gap-2 items-center'>
@@ -35,8 +40,8 @@ const JobCard = ({ job }) => {
         </div>
 
         <div className='py-3'>
-          <p className='text-sm'>
-            {job?.detail[0]?.desc?.slice(0, 150) + "..."}
+          <p className='text-sm text-gray-600'>
+            {desc ? desc.slice(0, 150) + "..." : "No description available"}
           </p>
         </div>
 
@@ -49,7 +54,6 @@ const JobCard = ({ job }) => {
           </span>
         </div>
       </div>
-      {/* </div> */}
     </Link>
   );
 };
