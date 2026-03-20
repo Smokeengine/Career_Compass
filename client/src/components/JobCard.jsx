@@ -8,8 +8,8 @@ const noLogo =
 const JobCard = ({ job }) => {
   // Handle both old MongoDB format (detail[0].desc) and new JSearch format (detail.desc)
   const desc = Array.isArray(job?.detail)
-    ? job?.detail[0]?.desc
-    : job?.detail?.desc;
+  ? job?.detail[0]?.desc
+  : job?.detail?.desc;
 
   const logo = job?.logo || job?.company?.profileUrl || noLogo;
 
@@ -23,11 +23,12 @@ const JobCard = ({ job }) => {
       <div className='w-full h-full flex flex-col justify-between'>
         <div className='flex gap-3'>
           <img
-            src={logo}
-            alt={job?.name || job?.company?.name}
-            className='w-14 h-14 object-contain rounded'
-            onError={(e) => { e.target.src = noLogo }}
-          />
+  src={logo}
+  alt={job?.name || job?.company?.name}
+  className='w-14 h-14 object-contain rounded'
+  loading="lazy"
+  onError={(e) => { e.target.src = noLogo }}
+/>
           <div className='w-full h-16 flex flex-col justify-center'>
             <p className='w-full h-12 flex items-center text-lg font-semibold overflow-hidden leading-5'>
               {job?.jobTitle}
