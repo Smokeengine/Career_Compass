@@ -104,13 +104,14 @@ export const updateJob = async (req, res, next) => {
 
 export const getJobPosts = async (req, res, next) => {
   try {
-    const { search, sort, location } = req.query;
+    const { search, location, page } = req.query;
 
     const query = search ? `${search} jobs` : 'software developer jobs';
     const loc = location || 'united states';
+    const currentPage = Number(page) || 1;
 
     const response = await fetch(
-      `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=1&num_pages=3&date_posted=month`,
+      `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query + ' in ' + loc)}&page=${currentPage}&num_pages=1&date_posted=month`,
       {
         method: 'GET',
         headers: {
@@ -121,9 +122,6 @@ export const getJobPosts = async (req, res, next) => {
     );
 
     const data = await response.json();
-    console.log('JSearch response status:', response.status)
-    console.log('JSearch data keys:', Object.keys(data))
-    console.log('JSearch data length:', data.data?.length)
 
     const jobs = data.data?.map(job => ({
       _id: job.job_id,
@@ -150,10 +148,10 @@ export const getJobPosts = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      totalJobs: jobs.length,
+      totalJobs: jobs.length > 0 ? 100 : 0,
       data: jobs,
-      page: 1,
-      numOfPage: 1,
+      page: currentPage,
+      numOfPage: 10,
     });
 
   } catch (error) {
