@@ -86,7 +86,8 @@ const Header = ({
               {popularSearch.map((search, index) => (
                 <span
                   key={index}
-                  className='bg-Harry text-slate-800 hover:font-semibold cursor-pointer py-3 px-3 rounded-full text-sm md:text-base'
+                  onClick={() => setSearchQuery(search)}
+                  className='bg-white text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 cursor-pointer py-3 px-3 rounded-full text-sm md:text-base transition-colors'
                 >
                   {search}
                 </span>
