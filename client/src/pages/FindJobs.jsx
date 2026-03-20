@@ -3,9 +3,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Header, Loading } from "../components";
 import { BiBriefcaseAlt2 } from "react-icons/bi";
 import { BsStars } from "react-icons/bs";
+import { MdOutlineWatchLater } from "react-icons/md";
 import { experience, jobTypes } from "../utils/data";
 import { CustomButton, JobCard, ListBox } from "../components";
 import { apiRequest, updateURL } from "../utils";
+
+const datePostedOptions = [
+  { label: "Any Time", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "Last 3 Days", value: "week" },
+  { label: "Last Month", value: "month" },
+];
 
 const FindJobs = () => {
   const [sort, setSort] = useState("Newest");
@@ -18,6 +26,7 @@ const FindJobs = () => {
   const [filterJobTypes, setFilterJobTypes] = useState([]);
   const [filterExp, setFilterExp] = useState([]);
   const [expVal, setExpVal] = useState([]);
+  const [datePosted, setDatePosted] = useState("month");
   const [isFetching, setIsFetching] = useState(false);
 
   const location = useLocation();
@@ -39,13 +48,13 @@ const FindJobs = () => {
 
     try {
       const res = await apiRequest({
-        url: "/jobs" + newURL,
+        url: `/jobs${newURL}&datePosted=${datePosted}`,
         method: "GET",
       });
 
       setNumPage(res?.numOfPage);
       setRecordCount(res?.totalJobs);
-      setData(res.data);
+      setData(prev => page === 1 ? res.data : [...prev, ...res.data]);
       setIsFetching(false);
     } catch (error) {
       setIsFetching(false);
@@ -54,6 +63,7 @@ const FindJobs = () => {
   };
 
   const filterJobs = (val) => {
+    setPage(1);
     if (filterJobTypes?.includes(val)) {
       setFilterJobTypes(filterJobTypes.filter((el) => el !== val));
     } else {
@@ -62,6 +72,7 @@ const FindJobs = () => {
   };
 
   const filterExperience = async (e) => {
+    setPage(1);
     if (expVal?.includes(e)) {
       setExpVal(expVal?.filter((el) => el != e));
     } else {
@@ -71,6 +82,8 @@ const FindJobs = () => {
 
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
+    setPage(1);
+    setData([]);
     await fetchJobs();
   };
 
@@ -91,12 +104,9 @@ const FindJobs = () => {
     }
   }, [expVal]);
 
- useEffect(() => {
-  const timer = setTimeout(() => {
+  useEffect(() => {
     fetchJobs();
-  }, 300);
-  return () => clearTimeout(timer);
-}, [sort, filterJobTypes, filterExp, page]);
+  }, [sort, filterJobTypes, filterExp, page, datePosted]);
 
   return (
     <div>
@@ -111,10 +121,10 @@ const FindJobs = () => {
       />
 
       <div className='container mx-auto flex gap-6 2xl:gap-10 md:px-5 py-0 md:py-6 bg-[#f0f0f0] rounded-lg mb-3'>
-        
+
         {/* Filter Sidebar */}
         <div className='hidden md:flex flex-col w-1/6 h-fit bg-white shadow-md rounded-xl overflow-hidden sticky top-6'>
-          
+
           {/* Sidebar Header */}
           <div className='bg-blue-600 px-4 py-3'>
             <p className='text-white font-semibold text-sm tracking-wide uppercase'>
@@ -130,10 +140,7 @@ const FindJobs = () => {
             </p>
             <div className='flex flex-col gap-2.5'>
               {jobTypes.map((jtype, index) => (
-                <label
-                  key={index}
-                  className='flex items-center gap-2.5 cursor-pointer group'
-                >
+                <label key={index} className='flex items-center gap-2.5 cursor-pointer group'>
                   <input
                     type='checkbox'
                     value={jtype}
@@ -149,17 +156,14 @@ const FindJobs = () => {
           </div>
 
           {/* Experience Section */}
-          <div className='px-4 py-4'>
+          <div className='px-4 py-4 border-b border-gray-100'>
             <p className='flex items-center gap-2 font-semibold text-gray-700 text-sm mb-3'>
               <BsStars className='text-blue-600 text-base' />
               Experience
             </p>
             <div className='flex flex-col gap-2.5'>
               {experience.map((exp) => (
-                <label
-                  key={exp.title}
-                  className='flex items-center gap-2.5 cursor-pointer group'
-                >
+                <label key={exp.title} className='flex items-center gap-2.5 cursor-pointer group'>
                   <input
                     type='checkbox'
                     value={exp?.value}
@@ -174,16 +178,45 @@ const FindJobs = () => {
             </div>
           </div>
 
+          {/* Date Posted Section */}
+          <div className='px-4 py-4'>
+            <p className='flex items-center gap-2 font-semibold text-gray-700 text-sm mb-3'>
+              <MdOutlineWatchLater className='text-blue-600 text-base' />
+              Date Posted
+            </p>
+            <div className='flex flex-col gap-2.5'>
+              {datePostedOptions.map((option) => (
+                <label key={option.value} className='flex items-center gap-2.5 cursor-pointer group'>
+                  <input
+                    type='radio'
+                    name='datePosted'
+                    value={option.value}
+                    checked={datePosted === option.value}
+                    className='w-4 h-4 accent-blue-600 cursor-pointer'
+                    onChange={(e) => {
+                      setDatePosted(e.target.value);
+                      setPage(1);
+                      setData([]);
+                    }}
+                  />
+                  <span className='text-sm text-gray-600 group-hover:text-blue-600 transition-colors'>
+                    {option.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
         </div>
 
         {/* Jobs List */}
         <div className='w-full md:w-5/6 px-5 md:px-0'>
-          
+
           {/* Results header */}
           <div className='flex items-center justify-between mb-4 bg-white rounded-xl px-4 py-3 shadow-sm'>
             <p className='text-sm md:text-base text-gray-600'>
               Showing:{" "}
-              <span className='font-semibold text-gray-900'>{recordCount}</span>{" "}
+              <span className='font-semibold text-gray-900'>{data.length}</span>{" "}
               Jobs Available
             </p>
             <div className='flex flex-col md:flex-row gap-0 md:gap-2 md:items-center'>
@@ -200,7 +233,7 @@ const FindJobs = () => {
                 logo: job?.company?.profileUrl,
                 ...job,
               };
-             return <JobCard job={newJob} key={job?._id} />;
+              return <JobCard job={newJob} key={job?._id || index} />;
             })}
           </div>
 
