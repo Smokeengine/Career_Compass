@@ -20,16 +20,14 @@ export const experience = [
 ];
 
 export const popularSearch = [
+  "React Developer",
+  "Full Stack Engineer", 
+  "Node.js Developer",
+  "TypeScript Engineer",
+  "Frontend Engineer",
   "Software Engineer",
-  "Developer",
-  "Full-Stack Developer",
-  "Data Scientist",
-  "Remote",
-  "Full-Time",
-  "Sales",
-  "Office Assistant",
+  "AWS Engineer",
 ];
-
 export const jobs = [
   {
     id: "1",
