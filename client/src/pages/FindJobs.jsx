@@ -91,9 +91,12 @@ const FindJobs = () => {
     }
   }, [expVal]);
 
-  useEffect(() => {
+ useEffect(() => {
+  const timer = setTimeout(() => {
     fetchJobs();
-  }, [sort, filterJobTypes, filterExp, page]);
+  }, 300);
+  return () => clearTimeout(timer);
+}, [sort, filterJobTypes, filterExp, page]);
 
   return (
     <div>
@@ -197,7 +200,7 @@ const FindJobs = () => {
                 logo: job?.company?.profileUrl,
                 ...job,
               };
-              return <JobCard job={newJob} key={index} />;
+             return <JobCard job={newJob} key={job?._id} />;
             })}
           </div>
 
