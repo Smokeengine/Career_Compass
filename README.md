@@ -7,7 +7,7 @@ It includes a React + Vite frontend for job discovery and profile management, an
 ---
 ## Live Demo
 
-- **Deployed App:** [https://career-compasss.netlify.app/user-auth]
+- **Deployed App:** [https://career-compass-mu-eight.vercel.app/user-auth]
 - You can Login using the user account where email id: test@12example.com and password: password123
 ---
 
